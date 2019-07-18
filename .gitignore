@@ -1,0 +1,8 @@
+db/
+db.zip
+
+fer_env/
+
+*.h5
+
+_*
