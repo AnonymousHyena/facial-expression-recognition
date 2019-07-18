@@ -10,19 +10,16 @@ from six.moves import cPickle as pickle
 from autoencoder import encoder
 from fer_autoenc import fc
 import tensorflow as tf
+import json
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 tf.logging.set_verbosity(tf.logging.ERROR)
 
-image_size = 128
-num_labels = 7
-num_channels = 1 # grayscale
-
-def reformat(dataset, labels):
-	dataset = dataset.reshape((-1, image_size, image_size, num_channels)).astype(np.float32)
-	return dataset, to_categorical(labels)
-
 if __name__ == '__main__':
+	json_file = open('./settings.json')
+	json_str = json_file.read()
+	settings = json.loads(json_str)
+
 	translate_labels = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 	pickle_file = './db/FER.pickle'
 
@@ -33,10 +30,12 @@ if __name__ == '__main__':
 		del save 
 		print('Test set', test_dataset.shape, test_labels.shape)
 
-	test_dataset, test_labels_oh = reformat(test_dataset, test_labels)
+	test_dataset = test_dataset.reshape(
+		(-1, settings['image_size'], settings['image_size'], settings['num_channels'])).astype(np.float32)
+	test_labels_oh = to_categorical(test_labels)
 	print('Test set', test_dataset.shape, test_labels_oh.shape)
 
-	input_img = Input(shape = (image_size, image_size, num_channels))
+	input_img = Input(shape = (settings['image_size'], settings['image_size'], settings['num_channels']))
 
 	encode = encoder(input_img)
 	full_model = Model(input_img,fc(encode))
@@ -55,7 +54,7 @@ if __name__ == '__main__':
 	print("Found %d correct labels" % len(correct))
 	for i, correct in enumerate(correct[:9]):
 		plt.subplot(3,3,i+1)
-		plt.imshow(test_dataset[correct].reshape(128,128), cmap='gray', interpolation='none')
+		plt.imshow(test_dataset[correct].reshape(settings['image_size'],settings['image_size']), cmap='gray', interpolation='none')
 		plt.title("Predicted {}, Class {}".format(translate_labels[predicted_classes[correct]], translate_labels[test_labels[correct]]))
 	plt.show()
 
@@ -63,10 +62,10 @@ if __name__ == '__main__':
 	print("Found %d incorrect labels" % len(incorrect))
 	for i, incorrect in enumerate(incorrect[:9]):
 		plt.subplot(3,3,i+1)
-		plt.imshow(test_dataset[incorrect].reshape(128,128), cmap='gray', interpolation='none')
+		plt.imshow(test_dataset[incorrect].reshape(settings['image_size'],settings['image_size']), cmap='gray', interpolation='none')
 		plt.title("Predicted {}, Class {}".format(translate_labels[predicted_classes[incorrect]], translate_labels[test_labels[incorrect]]))
 	plt.show()
 
 	from sklearn.metrics import classification_report
-	target_names = ["Class {}".format(translate_labels[i]) for i in range(num_labels)]
+	target_names = ["Class {}".format(translate_labels[i]) for i in range(settings['num_labels'])]
 	print(classification_report(test_labels, predicted_classes, target_names=target_names))

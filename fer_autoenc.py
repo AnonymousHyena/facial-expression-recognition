@@ -13,28 +13,21 @@ from keras import regularizers
 from six.moves import cPickle as pickle
 from autoencoder import encoder,decoder
 import tensorflow as tf
+import json
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 tf.logging.set_verbosity(tf.logging.ERROR)
-
-image_size = 128
-num_labels = 7
-num_channels = 1 # grayscale
-
-def reformat(dataset, labels):
-	dataset = dataset.reshape((-1, image_size, image_size, num_channels)).astype(np.float32)
-	return dataset, to_categorical(labels)
 
 def fc(enco):
 	conv1 = Conv2D(64, (3, 3), activation='relu', padding='same')(enco)
 	conv1 = BatchNormalization()(conv1)
 
-	# drop = SpatialDropout2D(rate = 0.5)(conv1)
+	# drop = SpatialDropout2D(rate = 0.4)(conv1)
 
-	# conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv1)
-	# conv2 = BatchNormalization()(conv2)
+	conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv1)
+	conv2 = BatchNormalization()(conv2)
 
-	# conv3 = Conv2D(16, (3, 3), activation='relu', padding='same')(conv2)
+	# conv3 = Conv2D(32, (3, 3), activation='relu', padding='same')(conv2)
 	# conv3 = BatchNormalization()(conv3)
 
 	# conv4 = Conv2D(16, (3, 3), activation='relu', padding='same')(conv3)
@@ -55,22 +48,26 @@ def fc(enco):
 
 	# pool = AveragePooling2D(pool_size=(2, 2))(conv7)
 
-	flat = Flatten()(conv1)
-	drop0 = Dropout(rate=0.65)(flat)
+	flat = Flatten()(conv2)
+	drop0 = Dropout(rate=0.7)(flat)
 
 	den1 = Dense(16, activation='relu')(drop0)
-	drop1 = Dropout(rate=0.4)(den1)
+	drop1 = Dropout(rate=0.5)(den1)
 
 	den2 = Dense(7, activation='relu')(drop1)
-	drop2 = Dropout(rate=0.2)(den2)
+	drop2 = Dropout(rate=0.25)(den2)
 
 	den3 = Dense(7, activation='relu')(drop2)
 	# drop4 = Dropout(rate=0.5)(den3)
 
-	out = Dense(num_labels, activation='softmax')(den3)
+	out = Dense(7, activation='softmax')(den3)
 	return out
 
 if __name__ == '__main__':
+	json_file = open('./settings.json')
+	json_str = json_file.read()
+	settings = json.loads(json_str)
+
 	pickle_file = './db/FER.pickle'
 
 	with open(pickle_file, 'rb') as f:
@@ -83,13 +80,17 @@ if __name__ == '__main__':
 		print('Training set', train_dataset.shape, train_labels.shape)
 		print('Validation set', valid_dataset.shape, valid_labels.shape)
 
-	train_dataset, train_labels = reformat(train_dataset, train_labels)
-	valid_dataset, valid_labels = reformat(valid_dataset, valid_labels)
+	train_dataset = train_dataset.reshape(
+		(-1, settings['image_size'], settings['image_size'], settings['num_channels'])).astype(np.float32)
+	train_labels = to_categorical(train_labels)
+	valid_dataset = valid_dataset.reshape(
+		(-1, settings['image_size'], settings['image_size'], settings['num_channels'])).astype(np.float32)
+	valid_labels = to_categorical(valid_labels)
 
 	print('Training set', train_dataset.shape, train_labels.shape)
 	print('Validation set', valid_dataset.shape, valid_labels.shape)
 
-	input_img = Input(shape = (image_size, image_size, num_channels))
+	input_img = Input(shape = (settings['image_size'], settings['image_size'], settings['num_channels']))
 
 	encode = encoder(input_img)
 	full_model = Model(input_img,fc(encode))
@@ -105,13 +106,13 @@ if __name__ == '__main__':
 		layer.trainable = False
 
 	full_model.compile(
-		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=1e-3),metrics=['accuracy'])
+		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=1e-4),metrics=['accuracy'])
 	full_model.summary()
 	plot_model(full_model, to_file='model.eps')
 
 
 	classify_train = full_model.fit(
-		train_dataset, train_labels, batch_size=128,epochs=100,verbose=1,validation_data=(valid_dataset, valid_labels))
+		train_dataset, train_labels, batch_size=256,epochs=125,verbose=1,validation_data=(valid_dataset, valid_labels))
 
 	full_model.save_weights('autoencoder_classification.h5')
 
@@ -119,10 +120,10 @@ if __name__ == '__main__':
 		layer.trainable = True
 
 	full_model.compile(
-		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=5e-4),metrics=['accuracy'])
+		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=75e-6, decay=0.0001),metrics=['accuracy'])
 
 	classify_train = full_model.fit(
-		train_dataset, train_labels, batch_size=64,epochs=400,verbose=1,validation_data=(valid_dataset, valid_labels))
+		train_dataset, train_labels, batch_size=64,epochs=500,verbose=1,validation_data=(valid_dataset, valid_labels))
 
 	full_model.save_weights('classification_complete.h5')
 

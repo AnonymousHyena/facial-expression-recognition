@@ -10,6 +10,7 @@ from keras.optimizers import RMSprop
 from keras.layers import Input,Reshape,Conv2D,MaxPooling2D,UpSampling2D
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
+import json
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -65,8 +66,9 @@ def decoder(coded):
 	return decoded
 
 if __name__ == '__main__':
-	image_size = 128
-	num_channels = 1 # grayscale
+	json_file = open('./settings.json')
+	json_str = json_file.read()
+	settings = json.loads(json_str)
 
 	pickle_file = './db/FER.pickle'
 
@@ -78,12 +80,12 @@ if __name__ == '__main__':
 		print('Training set', train_dataset.shape)
 		print('Validation set', valid_dataset.shape)
 
-	train_dataset = train_dataset.reshape((-1, image_size, image_size, num_channels)).astype(np.float32)
-	valid_dataset = valid_dataset.reshape((-1, image_size, image_size, num_channels)).astype(np.float32)
+	train_dataset = train_dataset.reshape((-1, settings['image_size'], settings['image_size'], settings['num_channels'])).astype(np.float32)
+	valid_dataset = valid_dataset.reshape((-1, settings['image_size'], settings['image_size'], settings['num_channels'])).astype(np.float32)
 	print('Training set', train_dataset.shape)
 	print('Validation set', valid_dataset.shape)
 
-	input_img = Input(shape = (image_size, image_size, num_channels))
+	input_img = Input(shape = (settings['image_size'], settings['image_size'], settings['num_channels']))
 
 	autoencoder = Model(input_img, decoder(encoder(input_img)))
 	autoencoder.compile(loss='mean_squared_error', optimizer = RMSprop(lr=75e-06))
@@ -109,6 +111,6 @@ if __name__ == '__main__':
 	#Comparing original images with reconstructions
 	f,a=plt.subplots(2,5,figsize=(10,4))
 	for i in range(5):
-		a[0][i].imshow(np.reshape(train_dataset[i],(128,128)))
-		a[1][i].imshow(np.reshape(results[i],(128,128)))
+		a[0][i].imshow(np.reshape(train_dataset[i],(settings['image_size'],settings['image_size'])))
+		a[1][i].imshow(np.reshape(results[i],(settings['image_size'],settings['image_size'])))
 	plt.show()
