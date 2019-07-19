@@ -19,12 +19,12 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 tf.logging.set_verbosity(tf.logging.ERROR)
 
 def fc(enco):
-	conv1 = Conv2D(64, (3, 3), activation='relu', padding='same')(enco)
+	conv1 = Conv2D(128, (3, 3), activation='relu', padding='same')(enco)
 	conv1 = BatchNormalization()(conv1)
 
-	# drop = SpatialDropout2D(rate = 0.4)(conv1)
+	drop = SpatialDropout2D(rate = 0.8)(conv1)
 
-	conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv1)
+	conv2 = Conv2D(128, (3, 3), activation='relu', padding='same')(drop)
 	conv2 = BatchNormalization()(conv2)
 
 	# conv3 = Conv2D(32, (3, 3), activation='relu', padding='same')(conv2)
@@ -52,12 +52,12 @@ def fc(enco):
 	drop0 = Dropout(rate=0.7)(flat)
 
 	den1 = Dense(16, activation='relu')(drop0)
-	drop1 = Dropout(rate=0.5)(den1)
+	drop1 = Dropout(rate=0.6)(den1)
 
-	den2 = Dense(7, activation='relu')(drop1)
-	drop2 = Dropout(rate=0.25)(den2)
+	den2 = Dense(7, activation='relu', kernel_regularizer=regularizers.l2(0.0075))(drop1)
+	# drop2 = Dropout(rate=0.25)(den2)
 
-	den3 = Dense(7, activation='relu')(drop2)
+	den3 = Dense(7, activation='relu', kernel_regularizer=regularizers.l2(0.0075))(den2)
 	# drop4 = Dropout(rate=0.5)(den3)
 
 	out = Dense(7, activation='softmax')(den3)
@@ -106,13 +106,13 @@ if __name__ == '__main__':
 		layer.trainable = False
 
 	full_model.compile(
-		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=1e-4),metrics=['accuracy'])
+		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=1e-3, decay=1e-5),metrics=['accuracy'])
 	full_model.summary()
 	plot_model(full_model, to_file='model.eps')
 
 
 	classify_train = full_model.fit(
-		train_dataset, train_labels, batch_size=256,epochs=125,verbose=1,validation_data=(valid_dataset, valid_labels))
+		train_dataset, train_labels, batch_size=256,epochs=100,verbose=1,validation_data=(valid_dataset, valid_labels))
 
 	full_model.save_weights('autoencoder_classification.h5')
 
@@ -120,10 +120,10 @@ if __name__ == '__main__':
 		layer.trainable = True
 
 	full_model.compile(
-		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=75e-6, decay=0.0001),metrics=['accuracy'])
+		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=1e-4, decay=5e-6),metrics=['accuracy'])
 
 	classify_train = full_model.fit(
-		train_dataset, train_labels, batch_size=64,epochs=500,verbose=1,validation_data=(valid_dataset, valid_labels))
+		train_dataset, train_labels, batch_size=64,epochs=450,verbose=1,validation_data=(valid_dataset, valid_labels))
 
 	full_model.save_weights('classification_complete.h5')
 
