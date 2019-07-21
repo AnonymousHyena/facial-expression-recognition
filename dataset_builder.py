@@ -5,7 +5,6 @@ from six.moves import cPickle as pickle
 from pre_proccess import procc_image
 import zipfile
 
-
 original_image_size =  896 # Original Pixel width and height
 image_size =  128 # Pixel width and height
 local_path = './db'
@@ -118,7 +117,7 @@ if __name__ == '__main__':
 		print(x)
 		ax = pickle.load(open(x, 'rb'))
 		sizes.append(len(ax))
-		emotion[i].imshow(ax[0])
+		emotion[i].imshow(ax[0],cmap='gray', interpolation='none')
 		emotion[i].set_title(x)
 	plt.show()
 
@@ -144,10 +143,10 @@ if __name__ == '__main__':
 
 	f,emotion=plt.subplots(2,5,figsize=(10,4))
 	for x in range(5):
-		emotion[0][x].imshow(train_dataset[x])
+		emotion[0][x].imshow(train_dataset[x],cmap='gray', interpolation='none')
 		emotion[0][x].set_title(train_folders[train_labels[x]])
 	for x in range(5,10):
-		emotion[1][x-5].imshow(train_dataset[x])
+		emotion[1][x-5].imshow(train_dataset[x],cmap='gray', interpolation='none')
 		emotion[1][x-5].set_title(train_folders[train_labels[x]])
 	plt.show()
 
