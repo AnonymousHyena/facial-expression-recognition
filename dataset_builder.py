@@ -112,14 +112,16 @@ if __name__ == '__main__':
 	train_datasets = maybe_pickle(train_folders, 10)
 	test_datasets = maybe_pickle(test_folders, 0)
 	sizes=list()
-	f,emotion=plt.subplots(1,7,figsize=(7,1))
+
+	f,emotion=plt.subplots(1,7,figsize=(18,3))
 	for i,x in enumerate(train_datasets):
 		print(x)
 		ax = pickle.load(open(x, 'rb'))
 		sizes.append(len(ax))
 		emotion[i].imshow(ax[0],cmap='gray', interpolation='none')
-		emotion[i].set_title(x)
-	plt.show()
+		emotion[i].set_title(x[5:-7])
+	f.savefig('./img/Train dataset examples.jpg')
+	# plt.show()
 
 	test_sizes = list()
 	for x in test_datasets:
@@ -141,14 +143,15 @@ if __name__ == '__main__':
 	test_dataset, test_labels = randomize(test_dataset, test_labels)
 	valid_dataset, valid_labels = randomize(valid_dataset, valid_labels)
 
-	f,emotion=plt.subplots(2,5,figsize=(10,4))
+	f,emotion=plt.subplots(2,5,figsize=(12,5))
 	for x in range(5):
 		emotion[0][x].imshow(train_dataset[x],cmap='gray', interpolation='none')
 		emotion[0][x].set_title(train_folders[train_labels[x]])
 	for x in range(5,10):
 		emotion[1][x-5].imshow(train_dataset[x],cmap='gray', interpolation='none')
 		emotion[1][x-5].set_title(train_folders[train_labels[x]])
-	plt.show()
+	f.savefig('./img/Train dataset examples proccessed.jpg')
+	# plt.show()
 
 	pickle_file = os.path.join(local_path, 'FER.pickle')
 

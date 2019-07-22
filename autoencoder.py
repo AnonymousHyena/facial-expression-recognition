@@ -29,14 +29,14 @@ def encoder(input_img):
 	conv3 = Conv2D(64, (3, 3), activation='relu', padding='same')(pool2)
 	conv3 = BatchNormalization()(conv3)
 
-	conv4 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv3)
-	conv4 = BatchNormalization()(conv4)
+	# conv4 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv3)
+	# conv4 = BatchNormalization()(conv4)
 
-	conv5 = Conv2D(256, (3, 3), activation='relu', padding='same')(conv4)
+	conv5 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv3)
 	conv5 = BatchNormalization()(conv5)
 	conv5 = MaxPooling2D(pool_size=(2,2))(conv5)
 
-	coded = Conv2D(512, (3, 3), activation='relu', padding='same')(conv5)
+	coded = Conv2D(128, (3, 3), activation='relu', padding='same')(conv5)
 	coded = BatchNormalization()(coded)
 
 	#16 x 16 x 512 (small and thick)
@@ -45,13 +45,13 @@ def encoder(input_img):
 def decoder(coded):    
 	#decoder
 
-	conv1 = Conv2DTranspose(256, (3, 3), strides=(2,2),activation='relu', padding='same')(coded)
+	conv1 = Conv2DTranspose(128, (3, 3), strides=(2,2),activation='relu', padding='same')(coded)
 	conv1 = BatchNormalization()(conv1)
 
-	conv6 = Conv2DTranspose(128, (3, 3), activation='relu', padding='same')(conv1)
-	conv6 = BatchNormalization()(conv6)
+	# conv6 = Conv2DTranspose(128, (3, 3), activation='relu', padding='same')(conv1)
+	# conv6 = BatchNormalization()(conv6)
 
-	conv7 = Conv2DTranspose(64, (3, 3), activation='relu', padding='same')(conv6)
+	conv7 = Conv2DTranspose(64, (3, 3), activation='relu', padding='same')(conv1)
 	conv7 = BatchNormalization()(conv7)
 
 	conv8 = Conv2DTranspose(32, (3, 3), strides=(2,2),activation='relu', padding='same')(conv7)
@@ -99,32 +99,32 @@ if __name__ == '__main__':
 	input_img = Input(shape = (settings['image_size'], settings['image_size'], settings['num_channels']))
 
 	autoencoder = Model(input_img, decoder(encoder(input_img)))
-	autoencoder.compile(loss='mean_squared_error', optimizer = RMSprop(lr=1e-4,decay=3e-6))
+	autoencoder.compile(loss='mean_squared_error', optimizer = RMSprop(lr=5e-4,decay=2e-6))
 	autoencoder.summary()
 
 	autoencoder_train = autoencoder.fit(
-		train_dataset, train_dataset, batch_size=50,epochs=200,verbose=1,validation_data=(valid_dataset, valid_dataset))
+		train_dataset, train_dataset, batch_size=64,epochs=200,verbose=1,validation_data=(valid_dataset, valid_dataset))
 
 	autoencoder.save_weights('autoencoder.h5')
 
 	loss = autoencoder_train.history['loss']
 	val_loss = autoencoder_train.history['val_loss']
 	epochs = range(200)
+
 	fig1 = plt.figure()
 	plt.plot(epochs, loss, 'bo', label='Training loss')
 	plt.plot(epochs, val_loss, 'b', label='Validation loss')
 	plt.title('Training and validation loss')
 	plt.legend()
-	fig1.savefig('./img/Auto training and validation loss.png')
+	fig1.savefig('./img/Auto training and validation loss.jpg')
 	plt.show()
 
 	results=autoencoder.predict(test_dataset[:5])
 
 	#Comparing original images with reconstructions
-	fig2 = plt.figure()
 	f,a=plt.subplots(2,5,figsize=(10,4))
 	for i in range(5):
 		a[0][i].imshow(np.reshape(test_dataset[i],(settings['image_size'],settings['image_size'])),cmap='gray', interpolation='none')
 		a[1][i].imshow(np.reshape(results[i],(settings['image_size'],settings['image_size'])),cmap='gray', interpolation='none')
-	fig2.savefig('./img/Auto comparisons.png')
-	plt.show()
+	f.savefig('./img/Auto comparisons.jpg')
+	# plt.show()
