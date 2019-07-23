@@ -6,3 +6,5 @@ fer_env/
 *.h5
 
 _*
+
+!model/*.h5

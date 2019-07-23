@@ -128,11 +128,11 @@ if __name__ == '__main__':
 		layer.trainable = True
 
 	full_model.compile(
-		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=2e-4, decay=4e-7),
+		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=2e-4, decay=2e-7),
 		metrics=['accuracy'])
 
 	classify_train = full_model.fit(
-		train_dataset, train_labels, batch_size=125,epochs=500,verbose=1,validation_data=(valid_dataset, valid_labels))
+		train_dataset, train_labels, batch_size=128,epochs=650,verbose=1,validation_data=(valid_dataset, valid_labels))
 
 	full_model.save_weights('classification_complete.h5')
 
@@ -142,14 +142,14 @@ if __name__ == '__main__':
 	val_loss = classify_train.history['val_loss']
 	epochs = range(len(accuracy))
 
-	fig1 = plt.figure()
+	fig1 = plt.figure(dpi=256, figsize=(8,4.5))
 	plt.plot(epochs, accuracy, 'bo', label='Training accuracy')
 	plt.plot(epochs, val_accuracy, 'b', label='Validation accuracy')
 	plt.title('Training and validation accuracy')
 	plt.legend()
 	fig1.savefig('./img/Training and validation accuracy.jpg')
 
-	fig2 = plt.figure()
+	fig2 = plt.figure(dpi=256, figsize=(8,4.5))
 	plt.plot(epochs, loss, 'bo', label='Training loss')
 	plt.plot(epochs, val_loss, 'b', label='Validation loss')
 	plt.title('Training and validation loss')
