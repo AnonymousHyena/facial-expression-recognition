@@ -5,8 +5,12 @@ from six.moves import cPickle as pickle
 from pre_proccess import procc_image
 import zipfile
 
+json_file = open('./settings.json')
+json_str = json_file.read()
+settings = json.loads(json_str)
+
 original_image_size =  896 # Original Pixel width and height
-image_size =  128 # Pixel width and height
+image_size =  settings['image_size']
 local_path = './db'
 
 def maybe_extract(filename, force=False):
@@ -19,18 +23,20 @@ def maybe_extract(filename, force=False):
 		with zipfile.ZipFile(os.path.join(filename), 'r') as zip_ref:
 			zip_ref.extractall('.')
 
-def load_emotion(folder, min_num_images):
+def load_emotion(folder, min_num_images, augment):
 	'''Load the data for a single emotion label. '''
 	image_files = os.listdir(os.path.join(local_path,folder))
-	dataset = np.ndarray(shape=(len(image_files), image_size, image_size), dtype = np.float32)
+	dataset = np.ndarray(shape=(len(image_files*settings['aug_multy']), image_size[0], image_size[1]), dtype = np.float32)
 
 	print(folder)
 	num_images = 0
 	for image in image_files:
 		image_file = os.path.join(local_path, folder, image)
 		try:
-			dataset[num_images,:,:] = procc_image(image_file,original_image_size,image_size)
-			num_images = num_images + 1
+			images = procc_image(image_file,original_image_size,image_size, augment, aug_mul=settings['aug_multy'])
+			for im in images:
+				dataset[num_images,:,:] = im
+				num_images = num_images + 1
 		except (IOError, ValueError) as e:
 			print('Could not read:', image_file,':',e,'- its ok, skipping.')
 	dataset = dataset[0:num_images,:,:]
@@ -42,7 +48,7 @@ def load_emotion(folder, min_num_images):
 	print('Standard deviation:', np.std(dataset))
 	return dataset
 
-def maybe_pickle(data_folders, min_num_images_per_class, force = False):
+def maybe_pickle(data_folders, min_num_images_per_class, augment, force = False):
 	'''Load an emotion and save it into a pickle''' 
 	dataset_names=[]
 	for folder in data_folders:
@@ -53,7 +59,7 @@ def maybe_pickle(data_folders, min_num_images_per_class, force = False):
 			print('%s already present - Skipping pickling.' % set_filename)
 		else:
 			print('Pickling %s' % set_filename)
-			dataset = load_emotion(folder, min_num_images_per_class)
+			dataset = load_emotion(folder, min_num_images_per_class, augment)
 			try:
 				with open(set_filename, 'wb') as f:
 					pickle.dump(dataset,f,pickle.HIGHEST_PROTOCOL)
@@ -63,7 +69,7 @@ def maybe_pickle(data_folders, min_num_images_per_class, force = False):
 
 def make_arrays(nb_rows, img_size):
 	if nb_rows:
-		dataset = np.ndarray((nb_rows, img_size, img_size), dtype=np.float32)
+		dataset = np.ndarray((nb_rows, img_size[0], img_size[1]), dtype=np.float32)
 		labels = np.ndarray(nb_rows, dtype=np.int32)
 	else:
 		dataset,labels=None,None
@@ -109,8 +115,8 @@ if __name__ == '__main__':
 	maybe_extract('db.zip')
 	train_folders = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 	test_folders = ['test/anger', 'test/disgust', 'test/fear', 'test/happiness', 'test/neutral', 'test/sadness', 'test/surprise']
-	train_datasets = maybe_pickle(train_folders, 10)
-	test_datasets = maybe_pickle(test_folders, 0)
+	train_datasets = maybe_pickle(train_folders, 10, True)
+	test_datasets = maybe_pickle(test_folders, 0, False)
 	sizes=list()
 
 	f,emotion=plt.subplots(1,7,figsize=(18,3))
@@ -129,10 +135,9 @@ if __name__ == '__main__':
 		test_sizes.append(len(ax))
 
 	train_size = 0.8
-	valid_size = 0.2
 
 	valid_dataset, valid_labels, train_dataset, train_labels = merge_datasets(
-		train_datasets, sizes, train_size, valid_size)
+		train_datasets, sizes, train_size, 1-train_size)
 	_, _, test_dataset, test_labels = merge_datasets(test_datasets, test_sizes, 1)
 
 	print('Training:', train_dataset.shape, train_labels.shape)

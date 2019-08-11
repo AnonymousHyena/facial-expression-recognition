@@ -38,11 +38,11 @@ with open(pickle_file, 'rb') as f:
 	print('Test set', test_dataset.shape, test_labels.shape)
 
 test_dataset = test_dataset.reshape(
-	(-1, settings['image_size'], settings['image_size'], settings['num_channels'])).astype(np.float32)
+	(-1, settings['image_size'][0], settings['image_size'][1], settings['num_channels'])).astype(np.float32)
 test_labels_oh = to_categorical(test_labels)
 print('Test set', test_dataset.shape, test_labels_oh.shape)
 
-input_img = Input(shape = (settings['image_size'], settings['image_size'], settings['num_channels']))
+input_img = Input(shape = (settings['image_size'][0], settings['image_size'][1], settings['num_channels']))
 
 encode = encoder(input_img)
 full_model = Model(input_img,fc(encode))
@@ -61,7 +61,7 @@ correct = np.where(predicted_classes==test_labels)[0]
 print("Found %d correct labels" % len(correct))
 for i, correct in enumerate(correct[:9]):
 	plt.subplot(3,3,i+1)
-	plt.imshow(test_dataset[correct].reshape(settings['image_size'],settings['image_size']), cmap='gray', interpolation='none')
+	plt.imshow(test_dataset[correct].reshape(settings['image_size'][0],settings['image_size'][1]), cmap='gray', interpolation='none')
 	plt.title("Predicted {}, Class {}".format(translate_labels[predicted_classes[correct]], translate_labels[test_labels[correct]]))
 plt.show()
 
@@ -69,7 +69,7 @@ incorrect = np.where(predicted_classes!=test_labels)[0]
 print("Found %d incorrect labels" % len(incorrect))
 for i, incorrect in enumerate(incorrect[:9]):
 	plt.subplot(3,3,i+1)
-	plt.imshow(test_dataset[incorrect].reshape(settings['image_size'],settings['image_size']), cmap='gray', interpolation='none')
+	plt.imshow(test_dataset[incorrect].reshape(settings['image_size'][0],settings['image_size'][1]), cmap='gray', interpolation='none')
 	plt.title("Predicted {}, Class {}".format(translate_labels[predicted_classes[incorrect]], translate_labels[test_labels[incorrect]]))
 plt.show()
 

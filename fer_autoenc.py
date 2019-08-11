@@ -50,10 +50,10 @@ def fc(enco):
 	flat = Flatten()(convs)
 	drop0 = Dropout(rate=0.7)(flat)
 
-	den1 = Dense(16, activation='relu',kernel_regularizer=regularizers.l2(0.008))(drop0)
+	den1 = Dense(128, activation='relu',kernel_regularizer=regularizers.l2(0.008))(drop0)
 	drop1 = Dropout(rate=0.6)(den1)
 
-	den2 = Dense(7, activation='relu', kernel_regularizer=regularizers.l2(0.008))(drop1)
+	den2 = Dense(16, activation='relu', kernel_regularizer=regularizers.l2(0.008))(drop1)
 
 	den3 = Dense(7, activation='relu', kernel_regularizer=regularizers.l2(0.008))(den2)
 
@@ -87,16 +87,16 @@ if __name__ == '__main__':
 		print('Validation set', valid_dataset.shape, valid_labels.shape)
 
 	train_dataset = train_dataset.reshape(
-		(-1, settings['image_size'], settings['image_size'], settings['num_channels'])).astype(np.float32)
+		(-1, settings['image_size'][0], settings['image_size'][1], settings['num_channels'])).astype(np.float32)
 	train_labels = to_categorical(train_labels)
 	valid_dataset = valid_dataset.reshape(
-		(-1, settings['image_size'], settings['image_size'], settings['num_channels'])).astype(np.float32)
+		(-1, settings['image_size'][0], settings['image_size'][1], settings['num_channels'])).astype(np.float32)
 	valid_labels = to_categorical(valid_labels)
 
 	print('Training set', train_dataset.shape, train_labels.shape)
 	print('Validation set', valid_dataset.shape, valid_labels.shape)
 
-	input_img = Input(shape = (settings['image_size'], settings['image_size'], settings['num_channels']))
+	input_img = Input(shape = (settings['image_size'][0], settings['image_size'][1], settings['num_channels']))
 
 	encode = encoder(input_img)
 	full_model = Model(input_img,fc(encode))
@@ -113,26 +113,33 @@ if __name__ == '__main__':
 		layer.trainable = False
 
 	full_model.compile(
-		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=2e-3, decay=1e-5),
+		loss=keras.losses.categorical_crossentropy, 
+		optimizer=keras.optimizers.Adam(lr=2e-3, decay=1e-5),
 		metrics=['accuracy'])
+
 	full_model.summary()
 	plot_model(full_model, to_file='./img/model.eps')
 
-	# classify_train = full_model.fit(
-	# 	train_dataset, train_labels, batch_size=256,epochs=200,verbose=1,validation_data=(valid_dataset, valid_labels))
+	classify_train = full_model.fit(
+		train_dataset, train_labels, batch_size=256,
+		epochs=200,
+		verbose=1,validation_data=(valid_dataset, valid_labels))
 
-	# full_model.save_weights('autoencoder_classification.h5')
-	full_model.load_weights('autoencoder_classification.h5')
+	full_model.save_weights('autoencoder_classification.h5')
+	# full_model.load_weights('autoencoder_classification.h5')
 
 	for layer in full_model.layers[:14]:
 		layer.trainable = True
 
 	full_model.compile(
-		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(lr=2e-4, decay=2e-7),
+		loss=keras.losses.categorical_crossentropy, 
+		optimizer=keras.optimizers.Adam(lr=2e-4, decay=1e-6),
 		metrics=['accuracy'])
 
 	classify_train = full_model.fit(
-		train_dataset, train_labels, batch_size=128,epochs=650,verbose=1,validation_data=(valid_dataset, valid_labels))
+		train_dataset, train_labels, batch_size=256, 
+		epochs=200,
+		verbose=1,validation_data=(valid_dataset, valid_labels))
 
 	full_model.save_weights('classification_complete.h5')
 
@@ -142,17 +149,17 @@ if __name__ == '__main__':
 	val_loss = classify_train.history['val_loss']
 	epochs = range(len(accuracy))
 
-	fig1 = plt.figure(dpi=256, figsize=(8,4.5))
+	fig1 = plt.figure(dpi=200, figsize=(8,4.5))
 	plt.plot(epochs, accuracy, 'bo', label='Training accuracy')
 	plt.plot(epochs, val_accuracy, 'b', label='Validation accuracy')
 	plt.title('Training and validation accuracy')
 	plt.legend()
 	fig1.savefig('./img/Training and validation accuracy.jpg')
 
-	fig2 = plt.figure(dpi=256, figsize=(8,4.5))
+	fig2 = plt.figure(dpi=200, figsize=(8,4.5))
 	plt.plot(epochs, loss, 'bo', label='Training loss')
 	plt.plot(epochs, val_loss, 'b', label='Validation loss')
 	plt.title('Training and validation loss')
 	plt.legend()
 	fig2.savefig('./img/Training and validation loss.jpg')
-	plt.show() 
+	# plt.show() 

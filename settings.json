@@ -1,5 +1,6 @@
 {
-	"image_size" : 128,
+	"image_size" : [128,128],
 	"num_labels" : 7,
-	"num_channels" : 1 
+	"num_channels" : 1,
+	"aug_multy" : 9 
 }
