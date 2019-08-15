@@ -137,12 +137,12 @@ if __name__ == '__main__':
 
 	full_model.compile(
 		loss=keras.losses.categorical_crossentropy, 
-		optimizer=keras.optimizers.Adam(lr=6e-5, decay=2e-7),
+		optimizer=keras.optimizers.Adam(lr=6e-5, decay=0.85e-7),
 		metrics=['accuracy'])
 
 	classify_train = full_model.fit(
 		train_dataset, train_labels, batch_size=256, 
-		epochs=300,
+		epochs=700,
 		verbose=1,validation_data=(valid_dataset, valid_labels))
 
 	full_model.save_weights('classification_complete.h5')
