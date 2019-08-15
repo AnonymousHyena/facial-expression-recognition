@@ -18,34 +18,28 @@ import json
 def encoder(input_img):
 	#encoder
 	#input = 128 x 128 x 1 (wide and thin)
-	conv1 = Conv2D(8, (7, 7), activation='relu', padding='same')(input_img)
+	conv1 = Conv2D(8, (5, 5), activation='relu', padding='same')(input_img)
 	conv1 = BatchNormalization()(conv1)
-	pool1 = AveragePooling2D(pool_size=(2, 2))(conv1)
+	pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
 	conv2 = Conv2D(16, (5, 5), activation='relu', padding='same')(pool1)
 	conv2 = BatchNormalization()(conv2)
-	pool2 = AveragePooling2D(pool_size=(2, 2))(conv2)
+	pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 
 	conv3 = Conv2D(32, (3, 3), activation='relu', padding='same')(pool2)
 	conv3 = BatchNormalization()(conv3)
+	conv3 = MaxPooling2D(pool_size=(2,2))(conv3)
 
-	conv5 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv3)
-	conv5 = BatchNormalization()(conv5)
-	conv5 = MaxPooling2D(pool_size=(2,2))(conv5)
-
-	coded = Conv2D(64, (3, 3), activation='relu', padding='same')(conv5)
+	coded = Conv2D(64, (3, 3), activation='relu', padding='same')(conv3)
 	coded = BatchNormalization()(coded)
+	coded = AveragePooling2D(pool_size=(2,2))(coded)
 
-	#16 x 16 x 512 (small and thick)
+	#16 x 16 x 64 (small and thick)
 	return coded
 
 def decoder(coded):    
 	#decoder
-
-	conv1 = Conv2DTranspose(64, (3, 3), strides=(2,2),activation='relu', padding='same')(coded)
-	conv1 = BatchNormalization()(conv1)
-
-	conv7 = Conv2DTranspose(32, (3, 3), strides=(1,1),activation='relu', padding='same')(conv1)
+	conv7 = Conv2DTranspose(32, (3, 3), strides=(2,2),activation='relu', padding='same')(coded)
 	conv7 = BatchNormalization()(conv7)
 
 	conv8 = Conv2DTranspose(16, (3, 3), strides=(2,2),activation='relu', padding='same')(conv7)
@@ -54,14 +48,14 @@ def decoder(coded):
 	conv9 = Conv2DTranspose(8, (5, 5), strides=(2,2),activation='relu', padding='same')(conv8)
 	conv9 = BatchNormalization()(conv9)
 
-	decoded = Conv2D(1, (7, 7), activation='sigmoid', padding='same')(conv9)
+	decoded = Conv2DTranspose(1, (5, 5), strides=(2,2), activation='sigmoid', padding='same')(conv9)
 	# decoded = BatchNormalization()(decoded)
 	
 	return decoded
 
 if __name__ == '__main__':
 	os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-	tf.logging.set_verbosity(tf.logging.ERROR)
+	tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 	config = tf.ConfigProto()
 	config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -95,17 +89,19 @@ if __name__ == '__main__':
 	input_img = Input(shape = (settings['image_size'][0], settings['image_size'][1], settings['num_channels']))
 
 	autoencoder = Model(input_img, decoder(encoder(input_img)))
-	autoencoder.compile(loss='mean_squared_error', optimizer = RMSprop(lr=1e-3,decay=5e-6))
+	autoencoder.compile(loss='mean_squared_error', optimizer = RMSprop(lr=1e-3,decay=1e-5))
 	autoencoder.summary()
 
 	autoencoder_train = autoencoder.fit(
-		train_dataset, train_dataset, batch_size=256,epochs=200,verbose=1,validation_data=(valid_dataset, valid_dataset))
+		train_dataset, train_dataset, batch_size=256,
+		epochs=100,
+		verbose=1,validation_data=(valid_dataset, valid_dataset))
 
 	autoencoder.save_weights('autoencoder.h5')
 
 	loss = autoencoder_train.history['loss']
 	val_loss = autoencoder_train.history['val_loss']
-	epochs = range(200)
+	epochs = range(len(loss))
 
 	fig1 = plt.figure(dpi=200, figsize=(8,4.5))
 	plt.plot(epochs, loss, 'bo', label='Training loss')

@@ -18,7 +18,7 @@ import tensorflow as tf
 import json
 
 def fc(enco):
-	enco = SpatialDropout2D(rate = 0.5)(enco)
+	# enco = SpatialDropout2D(rate = 0.5)(enco)
 
 	conv1 = Conv2D(64, (3, 3), activation='relu', padding='same')(enco)
 	conv1 = BatchNormalization()(conv1)
@@ -47,13 +47,17 @@ def fc(enco):
 	convs = Concatenate()([conv1,conv2,conv3,conv4])
 	convs = BatchNormalization()(convs)
 
-	flat = Flatten()(convs)
+	flat = Flatten()(enco)
 	drop0 = Dropout(rate=0.7)(flat)
 
-	den1 = Dense(128, activation='relu',kernel_regularizer=regularizers.l2(0.008))(drop0)
+	den1 = Dense(1024, activation='relu',kernel_regularizer=regularizers.l2(0.008))(drop0)
 	drop1 = Dropout(rate=0.6)(den1)
 
-	den2 = Dense(16, activation='relu', kernel_regularizer=regularizers.l2(0.008))(drop1)
+	den1 = Dense(256, activation='relu',kernel_regularizer=regularizers.l2(0.008))(den1)
+	drop1 = Dropout(rate=0.6)(den1)
+
+	den2 = Dense(32, activation='relu', kernel_regularizer=regularizers.l2(0.008))(drop1)
+	den2 = Dropout(rate=0.6)(den2)
 
 	den3 = Dense(7, activation='relu', kernel_regularizer=regularizers.l2(0.008))(den2)
 
@@ -62,7 +66,7 @@ def fc(enco):
 
 if __name__ == '__main__':
 	os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-	tf.logging.set_verbosity(tf.logging.ERROR)
+	tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 	config = tf.ConfigProto()
 	config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
@@ -105,40 +109,40 @@ if __name__ == '__main__':
 	autoencoder.load_weights('autoencoder.h5')
 	plot_model(autoencoder, to_file='./img/autoencoder.eps')
 
-	for l1,l2 in zip(full_model.layers[:14],autoencoder.layers[:14]):
+	for l1,l2 in zip(full_model.layers[:12],autoencoder.layers[:12]):
 		l1.set_weights(l2.get_weights())
 
-	for layer in full_model.layers[:14]:
+	for layer in full_model.layers[:12]:
 		# print(layer)
 		layer.trainable = False
 
 	full_model.compile(
 		loss=keras.losses.categorical_crossentropy, 
-		optimizer=keras.optimizers.Adam(lr=2e-3, decay=1e-5),
+		optimizer=keras.optimizers.Adam(lr=1e-3, decay=5e-6),
 		metrics=['accuracy'])
 
 	full_model.summary()
 	plot_model(full_model, to_file='./img/model.eps')
 
-	classify_train = full_model.fit(
-		train_dataset, train_labels, batch_size=256,
-		epochs=200,
-		verbose=1,validation_data=(valid_dataset, valid_labels))
+	# classify_train = full_model.fit(
+	# 	train_dataset, train_labels, batch_size=512,
+	# 	epochs=200,
+	# 	verbose=1,validation_data=(valid_dataset, valid_labels))
 
-	full_model.save_weights('autoencoder_classification.h5')
-	# full_model.load_weights('autoencoder_classification.h5')
+	# full_model.save_weights('autoencoder_classification.h5')
+	full_model.load_weights('autoencoder_classification.h5')
 
-	for layer in full_model.layers[:14]:
+	for layer in full_model.layers[:12]:
 		layer.trainable = True
 
 	full_model.compile(
 		loss=keras.losses.categorical_crossentropy, 
-		optimizer=keras.optimizers.Adam(lr=2e-4, decay=1e-6),
+		optimizer=keras.optimizers.Adam(lr=6e-5, decay=2e-7),
 		metrics=['accuracy'])
 
 	classify_train = full_model.fit(
 		train_dataset, train_labels, batch_size=256, 
-		epochs=200,
+		epochs=300,
 		verbose=1,validation_data=(valid_dataset, valid_labels))
 
 	full_model.save_weights('classification_complete.h5')

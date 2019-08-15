@@ -15,7 +15,7 @@ import tensorflow as tf
 import json
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-tf.logging.set_verbosity(tf.logging.ERROR)
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU

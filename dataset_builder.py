@@ -4,6 +4,7 @@ import os
 from six.moves import cPickle as pickle
 from pre_proccess import procc_image
 import zipfile
+import json
 
 json_file = open('./settings.json')
 json_str = json_file.read()
