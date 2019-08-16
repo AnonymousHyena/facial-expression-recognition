@@ -34,7 +34,7 @@ def encoder(input_img):
 	coded = BatchNormalization()(coded)
 	coded = AveragePooling2D(pool_size=(2,2))(coded)
 
-	#16 x 16 x 64 (small and thick)
+	#8 x 8 x 64 (small and thick)
 	return coded
 
 def decoder(coded):    
@@ -48,9 +48,7 @@ def decoder(coded):
 	conv9 = Conv2DTranspose(8, (5, 5), strides=(2,2),activation='relu', padding='same')(conv8)
 	conv9 = BatchNormalization()(conv9)
 
-	decoded = Conv2DTranspose(1, (5, 5), strides=(2,2), activation='sigmoid', padding='same')(conv9)
-	# decoded = BatchNormalization()(decoded)
-	
+	decoded = Conv2DTranspose(1, (5, 5), strides=(2,2), activation='sigmoid', padding='same')(conv9)	
 	return decoded
 
 if __name__ == '__main__':

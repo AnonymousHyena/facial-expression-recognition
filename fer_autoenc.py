@@ -18,35 +18,6 @@ import tensorflow as tf
 import json
 
 def fc(enco):
-	# enco = SpatialDropout2D(rate = 0.5)(enco)
-
-	conv1 = Conv2D(64, (3, 3), activation='relu', padding='same')(enco)
-	conv1 = BatchNormalization()(conv1)
-	drop = SpatialDropout2D(rate = 0.7)(conv1)
-	conv1 = Conv2D(64, (3, 3), activation='relu', padding='same')(drop)
-	# conv1 = BatchNormalization()(conv1)
-	
-	conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(enco)
-	conv2 = BatchNormalization()(conv2)
-	drop = SpatialDropout2D(rate = 0.7)(conv2)
-	conv2 = Conv2D(64, (3, 3), activation='relu', padding='same')(drop)
-	# conv2 = BatchNormalization()(conv2)
-	
-	conv3 = Conv2D(64, (3, 3), activation='relu', padding='same')(enco)
-	conv3 = BatchNormalization()(conv3)
-	drop = SpatialDropout2D(rate = 0.7)(conv3)
-	conv3 = Conv2D(64, (3, 3), activation='relu', padding='same')(drop)
-	# conv3 = BatchNormalization()(conv3)
-	
-	conv4 = Conv2D(64, (3, 3), activation='relu', padding='same')(enco)
-	conv4 = BatchNormalization()(conv4)
-	drop = SpatialDropout2D(rate = 0.7)(conv4)
-	conv4 = Conv2D(64, (3, 3), activation='relu', padding='same')(drop)
-	# conv4 = BatchNormalization()(conv4)
-
-	convs = Concatenate()([conv1,conv2,conv3,conv4])
-	convs = BatchNormalization()(convs)
-
 	flat = Flatten()(enco)
 	drop0 = Dropout(rate=0.7)(flat)
 
@@ -118,19 +89,19 @@ if __name__ == '__main__':
 
 	full_model.compile(
 		loss=keras.losses.categorical_crossentropy, 
-		optimizer=keras.optimizers.Adam(lr=1e-3, decay=5e-6),
+		optimizer=keras.optimizers.Adam(lr=0.4e-3, decay=2e-6),
 		metrics=['accuracy'])
 
 	full_model.summary()
 	plot_model(full_model, to_file='./img/model.eps')
 
-	# classify_train = full_model.fit(
-	# 	train_dataset, train_labels, batch_size=512,
-	# 	epochs=200,
-	# 	verbose=1,validation_data=(valid_dataset, valid_labels))
+	classify_train = full_model.fit(
+		train_dataset, train_labels, batch_size=512,
+		epochs=200,
+		verbose=1,validation_data=(valid_dataset, valid_labels))
 
-	# full_model.save_weights('autoencoder_classification.h5')
-	full_model.load_weights('autoencoder_classification.h5')
+	full_model.save_weights('autoencoder_classification.h5')
+	# full_model.load_weights('autoencoder_classification.h5')
 
 	for layer in full_model.layers[:12]:
 		layer.trainable = True
@@ -142,7 +113,7 @@ if __name__ == '__main__':
 
 	classify_train = full_model.fit(
 		train_dataset, train_labels, batch_size=256, 
-		epochs=700,
+		epochs=600,
 		verbose=1,validation_data=(valid_dataset, valid_labels))
 
 	full_model.save_weights('classification_complete.h5')
