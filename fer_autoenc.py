@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
 	autoencoder = Model(input_img, decoder(encoder(input_img)))
 	autoencoder.load_weights('autoencoder.h5')
-	plot_model(autoencoder, to_file='./img/autoencoder.eps')
+	plot_model(autoencoder, to_file='./img/autoencoder.eps',show_shapes=True, show_layer_names=False)
 
 	for l1,l2 in zip(full_model.layers[:12],autoencoder.layers[:12]):
 		l1.set_weights(l2.get_weights())
@@ -93,7 +93,7 @@ if __name__ == '__main__':
 		metrics=['accuracy'])
 
 	full_model.summary()
-	plot_model(full_model, to_file='./img/model.eps')
+	plot_model(full_model, to_file='./img/model.eps',show_shapes=True, show_layer_names=False)
 
 	classify_train = full_model.fit(
 		train_dataset, train_labels, batch_size=512,
