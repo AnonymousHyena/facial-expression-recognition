@@ -1,3 +1,5 @@
+clear
+
 rm -rf ./db
 rm -f *.h5
 rm -f model.eps

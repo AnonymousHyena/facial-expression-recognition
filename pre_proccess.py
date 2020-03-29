@@ -32,6 +32,11 @@ def procc_image(img_file,original_img_size,target_img_size,augment=False,aug_mul
 	img_data = img_data[detected_face[0][1]:detected_face[0][1]+detected_face[0][3],
 	detected_face[0][0]:detected_face[0][0]+detected_face[0][2]]
 	images = list()
+	img_data = (img_data - np.mean(img_data)) / 255.0
+	img_data = transform.resize(img_data, (target_img_size[0], target_img_size[1]), 
+		mode='symmetric', preserve_range=True)
+
+	images.append(img_data)
 	if augment:
 		# expand dimension to one sample
 		samples = np.expand_dims(img_data, 0)
@@ -40,7 +45,7 @@ def procc_image(img_file,original_img_size,target_img_size,augment=False,aug_mul
 		it = datagen.flow(samples[0:1,:,:,:], batch_size=1)
 
 		# generate samples
-		for i in range(aug_mul):
+		for i in range(aug_mul-1):
 			# generate batch of images
 			batch = it.next()
 			# convert to float
@@ -53,19 +58,13 @@ def procc_image(img_file,original_img_size,target_img_size,augment=False,aug_mul
 				mode='symmetric', preserve_range=True)
 
 			images.append(image)
-	else:
-		img_data = (img_data - np.mean(img_data)) / 255.0
-		img_data = transform.resize(img_data, (target_img_size[0], target_img_size[1]), 
-			mode='symmetric', preserve_range=True)
-
-		images.append(img_data)
 	return images
 
 if __name__ == '__main__':
 	import matplotlib.pyplot as plt
 
 	# Read image from your local file system
-	original_image = cv.imread('./db/anger/001_an_002.jpg')
+	original_image = cv.imread('./db/test/anger/KA.AN1.39.tiff')
 
 	# Convert color image to grayscale for Viola-Jones
 	grayscale_image = cv.cvtColor(original_image, cv.COLOR_BGR2GRAY)
@@ -88,7 +87,7 @@ if __name__ == '__main__':
 	cv.waitKey(0)
 	cv.destroyAllWindows()
 
-	im = procc_image('./db/anger/001_an_002.jpg',896,[128,128],True)
+	im = procc_image('./db/test/anger/KA.AN1.39.tiff',896,[128,128],True)
 	print(len(im))
 	print(im[0].shape)
 	f,a=plt.subplots(2,5,figsize=(10,4))

@@ -6,28 +6,33 @@ from pre_proccess import procc_image
 import zipfile
 import json
 
+import keras
+from keras.models import Model
+from keras.optimizers import Adam
+from keras.layers import Input,Flatten
+from keras.utils import to_categorical
+from keras.backend.tensorflow_backend import set_session
+
+from autoencoder import encoder
+from fer_autoenc import fc
+import tensorflow as tf
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
+# config.log_device_placement = True  # to log device placement (on which device the operation ran)
+sess = tf.Session(config=config)
+set_session(sess)
+
 json_file = open('./settings.json')
 json_str = json_file.read()
 settings = json.loads(json_str)
 
 original_image_size =  896 # Original Pixel width and height
-original_image_size =  256 # Original Pixel width and height
 image_size =  settings['image_size']
-local_path = './db'
-
-import sys
-# fold = int(sys.argv[1])
-fold = 1
-
-def maybe_extract(filename, force=False):
-	root = os.path.splitext(os.path.splitext(filename)[0])[0]
-	if os.path.isdir(root) and not force:
-	# You may override by setting force=True.
-		print('%s already present - Skipping extraction of %s.' % (root, filename))
-	else:
-		print('Extracting data for %s. This may take a while. Please wait.' % root)
-		with zipfile.ZipFile(os.path.join(filename), 'r') as zip_ref:
-			zip_ref.extractall('.')
+local_path = './trajectories'
 
 def load_emotion(folder, min_num_images, augment):
 	'''Load the data for a single emotion label. '''
@@ -93,8 +98,6 @@ def merge_datasets(pickle_files, sizes, train_size, fold=1, valid_size=0):
 		try:
 			with open(pickle_file, 'rb') as f:
 				emotion_set = pickle.load(f)
-				# let's shuffle the expretions to have random validation and training set
-				np.random.shuffle(emotion_set)
 				vsize_per_class = int(valid_size*sizes[label])
 				if valid_dataset is not None:
 					valid_emotion = emotion_set[(fold-1)*vsize_per_class:fold*vsize_per_class:1, :, :]
@@ -119,67 +122,105 @@ def randomize(dataset, labels):
 	shuffled_labels = labels[permutation]
 	return shuffled_dataset, shuffled_labels
 
+def fcfl(enco):
+	return Flatten()(enco)
+
 if __name__ == '__main__':
-	maybe_extract('db.zip')
-	train_folders = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
-	test_folders = ['test/anger', 'test/disgust', 'test/fear', 'test/happiness', 'test/neutral', 'test/sadness', 'test/surprise']
-	train_datasets = maybe_pickle(train_folders, 10, True)
+	test_folders = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 	test_datasets = maybe_pickle(test_folders, 0, False)
 	sizes=list()
-
-	f,emotion=plt.subplots(1,7,figsize=(18,3))
-	for i,x in enumerate(train_datasets):
-	# 	print(x)
-		ax = pickle.load(open(x, 'rb'))
-		sizes.append(len(ax))
-		emotion[i].imshow(ax[0],cmap='gray', interpolation='none')
-		emotion[i].set_title(x[5:-7])
-	f.savefig('./img/Train dataset examples.jpg')
-	# plt.show()
 
 	test_sizes = list()
 	for x in test_datasets:
 		ax = pickle.load(open(x, 'rb'))
 		test_sizes.append(len(ax))
 
-	train_size = 0.8
-
-	valid_dataset, valid_labels, train_dataset, train_labels = merge_datasets(
-		train_datasets, sizes, train_size, fold, 1-train_size)
 	_, _, test_dataset, test_labels = merge_datasets(test_datasets, test_sizes, 1)
 
-	print('Training:', train_dataset.shape, train_labels.shape)
-	print('Validation:', valid_dataset.shape, valid_labels.shape)
 	print('Testing:', test_dataset.shape, test_labels.shape)
+	pickle_file = os.path.join(local_path, 'FER_traj.pickle')
 
-	train_dataset, train_labels = randomize(train_dataset, train_labels)
-	test_dataset, test_labels = randomize(test_dataset, test_labels)
-	valid_dataset, valid_labels = randomize(valid_dataset, valid_labels)
+	translate_labels = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 
-	f,emotion=plt.subplots(2,5,figsize=(12,5))
-	for x in range(5):
-		emotion[0][x].imshow(train_dataset[x],cmap='gray', interpolation='none')
-		emotion[0][x].set_title(train_folders[train_labels[x]])
-	for x in range(5,10):
-		emotion[1][x-5].imshow(train_dataset[x],cmap='gray', interpolation='none')
-		emotion[1][x-5].set_title(train_folders[train_labels[x]])
-	f.savefig('./img/Train dataset examples proccessed.jpg')
-	# plt.show()
+	print('Test set', test_dataset.shape, test_labels.shape)
 
-	pickle_file = os.path.join(local_path, 'FER.pickle')
+	test_dataset = test_dataset.reshape(
+		(-1, settings['image_size'][0], settings['image_size'][1], settings['num_channels'])).astype(np.float32)
+	test_labels_oh = to_categorical(test_labels)
+	print('Test set', test_dataset.shape, test_labels_oh.shape)
 
-	try:
-		f = open(pickle_file, 'wb')
-		save = {
-			'train_dataset': train_dataset,
-			'train_labels': train_labels,
-			'valid_dataset': valid_dataset,
-			'valid_labels': valid_labels,
-			'test_dataset': test_dataset,
-			'test_labels': test_labels,
-		}
-		pickle.dump(save, f, pickle.HIGHEST_PROTOCOL)
-		f.close()
-	except Exception as e:
-		print('Unable to save data to', pickle_file, ':', e)
-		raise
+	input_img = Input(shape = (settings['image_size'][0], settings['image_size'][1], settings['num_channels']))
+
+	encode = encoder(input_img)
+	flat_level = (Model(input_img,fcfl(encode)))
+	full_model = Model(input_img,fc(encode))
+	full_model.load_weights('classification_complete.h5')
+
+	for l1,l2 in zip(flat_level.layers[:],full_model.layers[:14]):
+		l1.set_weights(l2.get_weights())
+
+	flat_level.compile(
+		loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(),metrics=['accuracy'])
+
+	predicted_classes = flat_level.predict(test_dataset)
+
+	from sklearn.decomposition import PCA
+	from sklearn.preprocessing import StandardScaler
+
+	scaler = StandardScaler()
+	scaler.fit(predicted_classes)
+	X_sc_train = scaler.transform(predicted_classes)
+
+	pca = PCA(n_components=3)
+	X_pca = pca.fit_transform(X_sc_train)
+
+	print(pca.explained_variance_ratio_)
+	print(X_pca[0])
+	from mpl_toolkits.mplot3d import Axes3D
+
+	fig = plt.figure()
+	ax = fig.add_subplot(111, projection='3d')
+	x = [x[0] for x in X_pca[:36]]
+	y = [x[1] for x in X_pca[:36]]
+	z = [x[2] for x in X_pca[:36]]
+	c = 'r'
+	ax.plot(x,y,z,color=c,label='Anger')
+
+	x = [x[0] for x in X_pca[36:63]]
+	y = [x[1] for x in X_pca[36:63]]
+	z = [x[2] for x in X_pca[36:63]]
+	c = 'y'
+	ax.plot(x,y,z,color=c,label='Disgust')
+
+	x = [x[0] for x in X_pca[63:90]]
+	y = [x[1] for x in X_pca[63:90]]
+	z = [x[2] for x in X_pca[63:90]]
+	c = 'g'
+	ax.plot(x,y,z,color=c,label='Fear')
+
+	x = [x[0] for x in X_pca[90:122]]
+	y = [x[1] for x in X_pca[90:122]]
+	z = [x[2] for x in X_pca[90:122]]
+	c = 'b'
+	ax.plot(x,y,z,color=c,label='Happiness')
+
+	x = [x[0] for x in X_pca[122:137]]
+	y = [x[1] for x in X_pca[122:137]]
+	z = [x[2] for x in X_pca[122:137]]
+	c = 'k'
+	ax.plot(x,y,z,color=c,label='Neutral')
+
+	x = [x[0] for x in X_pca[137:179]]
+	y = [x[1] for x in X_pca[137:179]]
+	z = [x[2] for x in X_pca[137:179]]
+	c = 'c'
+	ax.plot(x,y,z,color=c,label='Sadness')
+
+	x = [x[0] for x in X_pca[179:]]
+	y = [x[1] for x in X_pca[179:]]
+	z = [x[2] for x in X_pca[179:]]
+	c = 'm'
+	ax.plot(x,y,z,color=c,label='Surprise')
+
+	plt.legend()
+	plt.show()

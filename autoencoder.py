@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
 	autoencoder_train = autoencoder.fit(
 		train_dataset, train_dataset, batch_size=256,
-		epochs=100,
+		epochs=50,
 		verbose=1,validation_data=(valid_dataset, valid_dataset))
 
 	autoencoder.save_weights('autoencoder.h5')
@@ -102,12 +102,12 @@ if __name__ == '__main__':
 	epochs = range(len(loss))
 
 	fig1 = plt.figure(dpi=200, figsize=(8,4.5))
-	plt.plot(epochs, loss, 'bo', label='Training loss')
+	plt.plot(epochs, loss, 'b', label='Training loss', color='green')
 	plt.plot(epochs, val_loss, 'b', label='Validation loss')
 	plt.title('Training and validation loss')
 	plt.legend()
 	fig1.savefig('./img/Auto training and validation loss.jpg')
-	# plt.show()
+	plt.show()
 
 	results=autoencoder.predict(test_dataset[:5])
 

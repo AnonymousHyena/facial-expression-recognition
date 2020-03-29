@@ -73,6 +73,9 @@ for i, incorrect in enumerate(incorrect[:9]):
 	plt.title("Predicted {}, Class {}".format(translate_labels[predicted_classes[incorrect]], translate_labels[test_labels[incorrect]]))
 plt.show()
 
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
 target_names = ["Class {}".format(translate_labels[i]) for i in range(settings['num_labels'])]
 print(classification_report(test_labels, predicted_classes, target_names=target_names))
+
+print('Confusion Matrix')
+print(confusion_matrix(test_labels, predicted_classes))

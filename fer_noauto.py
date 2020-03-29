@@ -76,35 +76,6 @@ if __name__ == '__main__':
 	encode = encoder(input_img)
 	full_model = Model(input_img,fc(encode))
 
-	autoencoder = Model(input_img, decoder(encoder(input_img)))
-	autoencoder.load_weights('autoencoder.h5')
-	plot_model(autoencoder, to_file='./img/autoencoder.eps',show_shapes=True, show_layer_names=False)
-
-	for l1,l2 in zip(full_model.layers[:12],autoencoder.layers[:12]):
-		l1.set_weights(l2.get_weights())
-
-	for layer in full_model.layers[:12]:
-		layer.trainable = False
-
-	full_model.compile(
-		loss=keras.losses.categorical_crossentropy, 
-		optimizer=keras.optimizers.Adam(lr=0.4e-3, decay=2e-6),
-		metrics=['accuracy'])
-
-	full_model.summary()
-	plot_model(full_model, to_file='./img/model.eps',show_shapes=True, show_layer_names=False)
-
-	classify_train = full_model.fit(
-		train_dataset, train_labels, batch_size=512,
-		epochs=200,
-		verbose=1,validation_data=(valid_dataset, valid_labels_oh))
-
-	full_model.save_weights('autoencoder_classification.h5')
-	# full_model.load_weights('autoencoder_classification.h5')
-
-	for layer in full_model.layers[:12]:
-		layer.trainable = True
-
 	full_model.compile(
 		loss=keras.losses.categorical_crossentropy, 
 		optimizer=keras.optimizers.Adam(lr=6e-5, decay=0.85e-7),
@@ -115,7 +86,7 @@ if __name__ == '__main__':
 		epochs=600,
 		verbose=1,validation_data=(valid_dataset, valid_labels_oh))
 
-	full_model.save_weights('classification_complete.h5')
+	full_model.save_weights('classification_complete_noauto.h5')
 
 	accuracy = classify_train.history['acc']
 	val_accuracy = classify_train.history['val_acc']
@@ -128,11 +99,11 @@ if __name__ == '__main__':
 	plt.plot(epochs, val_accuracy, 'b', label='Validation accuracy')
 	plt.title('Training and validation accuracy')
 	plt.legend()
-	fig1.savefig('./img/Training and validation accuracy.jpg')
+	fig1.savefig('./img/Training and validation accuracy no auto.jpg')
 
 	fig2 = plt.figure(dpi=200, figsize=(8,4.5))
 	plt.plot(epochs, loss, 'b', label='Training loss', color='green')
 	plt.plot(epochs, val_loss, 'b', label='Validation loss')
 	plt.title('Training and validation loss')
 	plt.legend()
-	fig2.savefig('./img/Training and validation loss.jpg')
+	fig2.savefig('./img/Training and validation loss no autop.jpg')
